@@ -1,2 +1,2 @@
 # log-node-sdk
-OpenData Log Node SDK Wrapper for API
+OpenData Log TS SDK Wrapper for API
