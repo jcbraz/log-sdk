@@ -41,7 +41,17 @@ const notifications = log.stream<{ text: string }>("notifications");
 
 Data methods accept `{ signal, timeoutMs }` as their second argument; health, readiness and metrics accept it as their only argument. The HTTP timeout defaults to 35 seconds. A scan's input `timeoutMs` controls server long polling separately. `awaitDurable` defaults to `false`; set it to `true` to wait for durable storage.
 
-## Orders
+## Examples
+
+Runnable examples are in [`packages/log-sdk/examples`](https://github.com/jcbraz/log-sdk/tree/master/packages/log-sdk/examples). With a Log instance running, build the SDK and run either example from the repository root:
+
+```bash
+bun run build
+LOG_URL=http://localhost:8081 bun packages/log-sdk/examples/orders.ts
+LOG_URL=http://localhost:8081 bun packages/log-sdk/examples/agent-stream.ts
+```
+
+### Orders
 
 ```ts
 type OrderCreated = {
@@ -80,7 +90,7 @@ Checkpoint storage and event handling are application functions. Save after proc
 
 Type parameters describe the expected event shape. For runtime validation, pass `jsonCodec(validate)` to `log.stream`, or supply a custom `Codec<T>`.
 
-## Agent streams
+### Agent
 
 ```ts
 import { Log } from "opendata-log";

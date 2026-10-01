@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "test", "scripts", "tsup.config.ts"]
+  "include": ["src", "test", "scripts", "examples", "tsup.config.ts"]
 }
