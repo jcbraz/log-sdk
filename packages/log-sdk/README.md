@@ -173,3 +173,12 @@ bun run test
 bun run lint
 bun run check:package
 ```
+
+To publish the SDK from the repository root, authenticate with `npm login`, then run:
+
+```bash
+bun run release --dry-run
+bun run release
+```
+
+The release command targets `packages/log-sdk` and runs its build, type, test and package checks before publishing.
