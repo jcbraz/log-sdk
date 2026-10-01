@@ -51,8 +51,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "bun test --pass-with-no-tests",
-    "lint": "prettier --check src *.json *.ts"
+    "test": "bun test test/client.test.ts test/protocol.test.ts",
+    "lint": "prettier --check src test *.json *.ts"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
