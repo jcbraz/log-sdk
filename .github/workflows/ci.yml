@@ -23,3 +23,17 @@ jobs:
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - run: bun run check:package
+      - name: Start pinned OpenData Log release
+        run: >-
+          docker run --detach --name log-sdk-ci --publish 127.0.0.1:18080:8080
+          ghcr.io/opendata-oss/log@sha256:0eca75d509370a40ae76230fc70db65082a0af26c56128bd9032925df9f3a92f
+          --in-memory --port 8080
+      - name: Wait for readiness
+        run: curl --fail --retry 20 --retry-all-errors --retry-delay 1 http://127.0.0.1:18080/-/ready
+      - run: bun run test:integration
+        env:
+          LOG_BASE_URL: http://127.0.0.1:18080
+      - name: Show server failures
+        if: failure()
+        run: docker logs log-sdk-ci || true

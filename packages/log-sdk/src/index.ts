@@ -1,4 +1,6 @@
 export { Log } from "./client/index.js";
+export { jsonCodec } from "./codecs.js";
+export { LogStream } from "./stream/index.js";
 export {
   LogError,
   OperationError,

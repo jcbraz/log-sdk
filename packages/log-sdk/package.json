@@ -51,8 +51,11 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "bun test test/client.test.ts test/protocol.test.ts",
-    "lint": "prettier --check src test *.json *.ts"
+    "test": "bun test test/client.test.ts test/protocol.test.ts test/codecs.test.ts test/stream.test.ts",
+    "lint": "prettier --check src test scripts *.json *.ts",
+    "test:integration": "bun test test/integration.test.ts --timeout 20000",
+    "check:package": "publint && node scripts/check-package.mjs",
+    "prepublishOnly": "bun run build && bun run typecheck && bun run test && bun run check:package"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

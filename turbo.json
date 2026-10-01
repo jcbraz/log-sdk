@@ -9,6 +9,14 @@
       "dependsOn": ["build"]
     },
     "lint": {},
-    "test": {}
+    "test": {},
+    "test:integration": {
+      "cache": false,
+      "env": ["LOG_BASE_URL", "LOG_READ_ONLY_URL"]
+    },
+    "check:package": {
+      "dependsOn": ["build"],
+      "cache": false
+    }
   }
 }

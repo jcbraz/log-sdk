@@ -1,3 +1,6 @@
+import { jsonCodec } from "../codecs.js";
+import type { Codec } from "../types/stream.js";
+import { LogStream } from "../stream/index.js";
 import type { ClientOptions } from "../types/client.js";
 import { createAppend } from "./mutations.js";
 import { createReads } from "./reads.js";
@@ -86,5 +89,17 @@ export class Log {
     this.healthy = telemetry.healthy;
     this.ready = telemetry.ready;
     this.metrics = telemetry.metrics;
+  }
+
+  /**
+   * Bind typed append, scan and follow operations to one UTF-8 key.
+   * @typeParam T - Application event type; a type argument alone does not validate data.
+   * @param key - The UTF-8 key identifying the event stream.
+   * @param codec - Event encoder and decoder. Defaults to UTF-8 JSON.
+   * @returns A typed stream using this client's connection settings.
+   * @throws {ValidationError} The stream key is not a string.
+   */
+  stream<T>(key: string, codec: Codec<T> = jsonCodec<T>()): LogStream<T> {
+    return new LogStream(this, key, codec);
   }
 }
