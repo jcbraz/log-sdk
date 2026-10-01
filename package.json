@@ -1,0 +1,25 @@
+{
+  "name": "log-sdk-workspace",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "test:integration": "turbo run test:integration",
+    "check:package": "turbo run check:package"
+  },
+  "devDependencies": {
+    "turbo": "2.11.5"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "trustedDependencies": [
+    "esbuild"
+  ],
+  "dependencies": {
+    "@types/node": "^26.6.3"
+  }
+}
