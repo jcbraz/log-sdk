@@ -107,7 +107,7 @@ for await (const entry of orders.follow({ startSequence: checkpoint })) {
 }
 ```
 
-The result can trail the true end by writes the server has not observed yet, such as non-durable appends. Reading from it may include those records but never skips one. OpenData Log has no endpoint for this yet: the SDK scans an internal key that is never written, and a drained scan reports the log's frontier as `nextSequence` ([RFC 0007](https://github.com/opendata-oss/opendata/blob/main/log/rfcs/0007-efficient-tail-scans.md)). Servers older than 1.0.0 omit that field, and `endSequence` throws a `ReadError` instead of guessing.
+`endSequence` needs OpenData Log 1.0.0 or later, whose scans report the log's end as `nextSequence` ([RFC 0007](https://github.com/opendata-oss/opendata/blob/main/log/rfcs/0007-efficient-tail-scans.md)). Older servers keep working with every other method as before. On them, `endSequence` throws a `ReadError` instead of guessing, so start from a saved checkpoint or `0n` there. The result can trail writes the server has not observed yet, such as non-durable appends: reading from it may include those records but never skips one.
 
 ### Agent
 

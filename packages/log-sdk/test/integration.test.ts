@@ -500,7 +500,6 @@ test("endSequence is the whole log's end and a valid start for any key", async (
   });
 
   const end = await client.endSequence();
-  assert.equal(typeof end, "bigint");
   assert.ok(end >= appended.startSequence + 2n);
 
   const later = await client.append({

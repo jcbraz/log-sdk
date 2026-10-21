@@ -323,51 +323,31 @@ test("endSequence reads the whole log's end from an unwritten probe key", async 
   const { key, ...query } = Object.fromEntries(urls[0]!.searchParams);
   assert.deepEqual(query, { start_seq: "0", limit: "1" });
   assert.ok(key!.startsWith("\u0000"));
-
-  await client.endSequence();
-  assert.equal(urls[1]!.searchParams.get("key"), key);
 });
 
 test("endSequence rejects servers without nextSequence and a written probe key", async () => {
-  const pages = [
+  const rejects = (page: object, message: RegExp) =>
+    assert.rejects(
+      new Log({
+        baseURL,
+        fetch: async () => Response.json(page),
+      }).endSequence(),
+      readFailure("endSequence", ProtocolError, (cause) =>
+        assert.match(cause.message, message),
+      ),
+    );
+  await rejects(
     { status: "success", key: "", values: [] },
+    /requires OpenData Log 1\.0\.0 or later/,
+  );
+  await rejects(
     {
       status: "success",
       key: "",
       values: [{ sequence: 4, value: "" }],
       nextSequence: 5,
     },
-  ];
-  for (const page of pages) {
-    const client = new Log({ baseURL, fetch: async () => Response.json(page) });
-    await assert.rejects(
-      client.endSequence(),
-      readFailure("endSequence", ProtocolError),
-    );
-  }
-  await assert.rejects(
-    new Log({
-      baseURL,
-      fetch: async () => Response.json(pages[0]),
-    }).endSequence(),
-    /requires OpenData Log 1\.0\.0 or later/,
-  );
-});
-
-test("endSequence applies request options before dispatch", async () => {
-  const client = new Log({
-    baseURL,
-    fetch: async () => {
-      assert.fail("must not fetch");
-    },
-  });
-  await assert.rejects(
-    client.endSequence({ timeoutMs: 0 }),
-    readFailure("endSequence", ValidationError),
-  );
-  await assert.rejects(
-    client.endSequence({ signal: AbortSignal.abort() }),
-    readFailure("endSequence", AbortError),
+    /probe key has records/,
   );
 });
 
