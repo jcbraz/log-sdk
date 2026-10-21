@@ -12,7 +12,7 @@ const textDecoder = new TextDecoder("utf-8", { fatal: true });
  */
 export function jsonCodec<T>(validate?: (value: unknown) => T): Codec<T> {
   return {
-    encode(value: T): Uint8Array<ArrayBuffer> {
+    encode(value: T): Uint8Array {
       const incomingJson = JSON.stringify(value);
       const isValidJson = incomingJson !== undefined;
       if (!isValidJson) throw new TypeError("Value cannot be encoded as JSON.");
@@ -20,7 +20,7 @@ export function jsonCodec<T>(validate?: (value: unknown) => T): Codec<T> {
       return textEncoder.encode(incomingJson);
     },
 
-    decode(bytes: Uint8Array<ArrayBufferLike>): T {
+    decode(bytes: Uint8Array): T {
       const incomingJson = textDecoder.decode(bytes);
       const value: unknown = JSON.parse(incomingJson);
       return validate ? validate(value) : (value as T);

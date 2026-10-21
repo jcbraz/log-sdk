@@ -1,18 +1,18 @@
 export { Log } from "./client/index.js";
 export { jsonCodec } from "./codecs.js";
-export { LogStream } from "./stream/index.js";
 export {
+  AbortError,
+  AppendError,
+  ConnectionError,
+  EventDecodingError,
+  EventEncodingError,
+  HttpError,
   LogError,
   OperationError,
-  AppendError,
-  ReadError,
-  HttpError,
-  ConnectionError,
-  TimeoutError,
-  AbortError,
   ProtocolError,
+  ReadError,
+  TimeoutError,
   ValidationError,
-  EventEncodingError,
-  EventDecodingError,
 } from "./errors.js";
+export { LogStream } from "./stream/index.js";
 export type * from "./types/index.js";

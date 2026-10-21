@@ -1,20 +1,20 @@
 import {
-  Log,
-  AppendError,
-  EventDecodingError,
-  EventEncodingError,
-  LogError,
-  OperationError,
-  ReadError,
-  jsonCodec,
+  type AppendError,
   type AppendOutcome,
   type Codec,
-  type LogStream,
+  type EventDecodingError,
+  type EventEncodingError,
+  type jsonCodec,
+  type Log,
   type LogEntry,
-  type StreamAppendRequest,
-  type ScanRequest,
+  LogError,
   type LogOperation,
+  type LogStream,
+  OperationError,
+  type ReadError,
   type ReadOperation,
+  type ScanRequest,
+  type StreamAppendRequest,
 } from "../src/index.js";
 
 type Equal<A, B> =
@@ -29,53 +29,54 @@ interface OrderEvent {
 }
 declare const log: Log;
 
-// Generic signatures retain inference from either a codec or an unknown-input validator.
-type JsonFactory = Assert<
+export type JsonFactory = Assert<
   Equal<typeof jsonCodec, <T>(validate?: (value: unknown) => T) => Codec<T>>
 >;
-type StreamFactory = Assert<
+export type StreamFactory = Assert<
   Equal<Log["stream"], <T>(key: string, codec?: Codec<T>) => LogStream<T>>
 >;
-type OrderCodec = Assert<
+export type OrderCodec = Assert<
   Equal<ReturnType<typeof jsonCodec<OrderEvent>>, Codec<OrderEvent>>
 >;
-type BinaryStream = Assert<
+export type BinaryStream = Assert<
   Equal<ReturnType<typeof log.stream<Uint8Array>>, LogStream<Uint8Array>>
 >;
-type FollowEntry = Assert<
+export type FollowEntry = Assert<
   Equal<
     ReturnType<LogStream<OrderEvent>["follow"]>,
     AsyncIterable<LogEntry<OrderEvent>>
   >
 >;
-type AppendInput = Assert<
+export type AppendInput = Assert<
   Equal<
     Parameters<LogStream<OrderEvent>["append"]>[0],
     StreamAppendRequest<OrderEvent>
   >
 >;
 
-type InvalidEvent = Assert<
-  // @ts-expect-error A typed stream rejects events with another schema.
+export type StreamRejectsEventsWithAnotherSchema = Assert<
+  // @ts-expect-error
   Assignable<{ values: readonly string[] }, StreamAppendRequest<OrderEvent>>
 >;
-// @ts-expect-error GET keys cannot contain arbitrary binary bytes.
-type InvalidScanKey = Assert<Assignable<{ key: Uint8Array }, ScanRequest>>;
-type InvalidSequence = Assert<
-  // @ts-expect-error Sequences accept integer numbers or bigint, never decimal strings.
+export type ScanKeyRejectsBinaryBytes = Assert<
+  // @ts-expect-error
+  Assignable<{ key: Uint8Array }, ScanRequest>
+>;
+export type SequenceRejectsDecimalStrings = Assert<
+  // @ts-expect-error
   Assignable<{ key: string; startSequence: string }, ScanRequest>
 >;
-type InvalidValidator = Assert<
-  // @ts-expect-error A JSON validator must accept unknown, rather than asserting trust in an object.
+export type JsonValidatorMustAcceptUnknown = Assert<
+  // @ts-expect-error
   Assignable<(value: OrderEvent) => OrderEvent, (value: unknown) => OrderEvent>
 >;
 
-type InvalidStreamWidening = Assert<
-  // @ts-expect-error A typed stream cannot accept arbitrary values through a widened stream reference.
+export type TypedStreamRejectsWidenedEvents = Assert<
+  // @ts-expect-error
   Assignable<LogStream<OrderEvent>, LogStream<unknown>>
 >;
 
-type ReadOperations = Assert<
+export type ReadOperations = Assert<
   Equal<
     ReadOperation,
     | "scan"
@@ -88,13 +89,19 @@ type ReadOperations = Assert<
     | "metrics"
   >
 >;
-type Operations = Assert<Equal<LogOperation, "append" | ReadOperation>>;
-type AppendOutcomes = Assert<Equal<AppendOutcome, "not-sent" | "unknown">>;
-type AppendOperation = Assert<Equal<AppendError["operation"], "append">>;
-type ReadOperationField = Assert<Equal<ReadError["operation"], ReadOperation>>;
-type OperationCause = Assert<Equal<OperationError["cause"], LogError>>;
-type EventIndex = Assert<Equal<EventEncodingError["index"], number>>;
-type EventSequence = Assert<Equal<EventDecodingError["sequence"], bigint>>;
+export type Operations = Assert<Equal<LogOperation, "append" | ReadOperation>>;
+export type AppendOutcomes = Assert<
+  Equal<AppendOutcome, "not-sent" | "unknown">
+>;
+export type AppendOperation = Assert<Equal<AppendError["operation"], "append">>;
+export type ReadOperationField = Assert<
+  Equal<ReadError["operation"], ReadOperation>
+>;
+export type OperationCause = Assert<Equal<OperationError["cause"], LogError>>;
+export type EventIndex = Assert<Equal<EventEncodingError["index"], number>>;
+export type EventSequence = Assert<
+  Equal<EventDecodingError["sequence"], bigint>
+>;
 
 declare const operationFailure: AppendError | ReadError;
 if (operationFailure.operation === "append") {
@@ -105,13 +112,13 @@ if (operationFailure.operation === "append") {
   const readFailure: ReadError = operationFailure;
   const operation: ReadOperation = readFailure.operation;
   void operation;
-  // @ts-expect-error Read failures cannot claim an append dispatch outcome.
+  // @ts-expect-error
   readFailure.outcome;
 }
 
-type InvalidReadOperation = Assert<
-  // @ts-expect-error Appends have an outcome and cannot be represented as read failures.
+export type AppendIsNotAReadOperation = Assert<
+  // @ts-expect-error
   Assignable<"append", ReadOperation>
 >;
-// @ts-expect-error An operation failure needs a concrete read or append context.
+// @ts-expect-error
 new OperationError({ operation: "append", cause: new LogError("failed") });

@@ -25,16 +25,18 @@ export function encodeBytes(bytesInput: BytesInput): string {
       inputBytes.byteLength,
     ).toString("base64");
 
-  // Bound spread arguments so browser engines can encode large records.
-  const chunkSize = 8192;
+  const engineSafeSpreadArgumentCount = 8192;
   let binaryString = "";
   for (
     let chunkStart = 0;
     chunkStart < inputBytes.length;
-    chunkStart += chunkSize
+    chunkStart += engineSafeSpreadArgumentCount
   ) {
     binaryString += String.fromCharCode(
-      ...inputBytes.subarray(chunkStart, chunkStart + chunkSize),
+      ...inputBytes.subarray(
+        chunkStart,
+        chunkStart + engineSafeSpreadArgumentCount,
+      ),
     );
   }
   return btoa(binaryString);
@@ -52,16 +54,14 @@ export function decodeBytes(
     throw new ProtocolError(`${fieldName} must be padded standard base64`);
   }
 
-  const paddingLength = base64Value.endsWith("==")
-    ? 2
-    : base64Value.endsWith("=")
-      ? 1
-      : 0;
+  const hasDoublePadding = base64Value.endsWith("==");
+  const singlePaddingLength = base64Value.endsWith("=") ? 1 : 0;
+  const paddingLength = hasDoublePadding ? 2 : singlePaddingLength;
   const lastBase64Digit = BASE64_ALPHABET.indexOf(
     base64Value[base64Value.length - paddingLength - 1] ?? "",
   );
-  // Each padding character leaves two unused bits; "AB==" has nonzero bits.
-  const unusedBitCount = paddingLength * 2;
+  const unusedBitsPerPaddingCharacter = 2;
+  const unusedBitCount = paddingLength * unusedBitsPerPaddingCharacter;
   const unusedBitsMask = (1 << unusedBitCount) - 1;
 
   const hasCanonicalPadding = (lastBase64Digit & unusedBitsMask) === 0;
@@ -78,9 +78,8 @@ export function decodeBytes(
     );
   }
 
-  // atob returns one character per byte; index 0 is that character.
   const decodedBinaryString = atob(base64Value);
-  return Uint8Array.from(decodedBinaryString, (byteCharacter) =>
+  return Uint8Array.from(decodedBinaryString, (byteCharacter): number =>
     byteCharacter.charCodeAt(0),
   );
 }

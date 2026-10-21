@@ -2,8 +2,9 @@ import { ValidationError } from "../../errors.js";
 import { integer } from "../../protocol.js";
 import type { ClientOptions } from "../../types/client.js";
 import type { RequestInput } from "../request.js";
+import type { PreparedRequest, RequestConfig } from "../types.js";
 
-export function configureRequest(options: ClientOptions) {
+export function configureRequest(options: ClientOptions): RequestConfig {
   let baseURL: URL;
   try {
     baseURL = new URL(options.baseURL);
@@ -40,13 +41,13 @@ export function prepareRequest({
   config,
   input,
 }: {
-  config: ReturnType<typeof configureRequest>;
+  config: RequestConfig;
   input: RequestInput<unknown>;
-}) {
+}): PreparedRequest {
   const method = input.method ?? "GET";
   const url = new URL(input.path, config.baseURL);
   const query = Object.entries(input.query ?? {})
-    .filter(([, value]) => value !== undefined)
+    .filter(([, value]): boolean => value !== undefined)
     .map(([name, value]): [string, string] => [name, String(value)]);
   url.search = new URLSearchParams(query).toString();
 

@@ -1,7 +1,7 @@
 import { jsonCodec } from "../codecs.js";
-import type { Codec } from "../types/stream.js";
 import { LogStream } from "../stream/index.js";
 import type { ClientOptions } from "../types/client.js";
+import type { Codec } from "../types/stream.js";
 import { createAppend } from "./mutations.js";
 import { createReads } from "./reads.js";
 import { createRequest } from "./request.js";

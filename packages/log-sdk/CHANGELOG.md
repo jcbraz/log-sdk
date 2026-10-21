@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Export `KeyEntry` and `Segment`, the element types of `ListKeysResponse.keys` and `ListSegmentsResponse.segments`. The response shapes are unchanged.
+
 ## 0.1.0
 
 - Typed HTTP client for all five data endpoints and health, readiness and metrics.

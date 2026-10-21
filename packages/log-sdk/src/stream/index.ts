@@ -1,9 +1,9 @@
-import type { Log } from "../client/index.js";
 import { ValidationError } from "../errors.js";
 import type { Codec } from "../types/stream.js";
 import { createAppend } from "./append.js";
-import { createScan } from "./scan.js";
 import { createFollow } from "./follow.js";
+import { createScan } from "./scan.js";
+import type { StreamClient } from "./types.js";
 
 /** A typed view of one UTF-8 key. Processing and checkpoint persistence remain caller-owned. */
 export class LogStream<T> {
@@ -40,7 +40,7 @@ export class LogStream<T> {
    * @throws {ValidationError} The stream key is not a string.
    */
   constructor(
-    client: Pick<Log, "append" | "scan">,
+    client: StreamClient,
     readonly key: string,
     codec: Codec<T>,
   ) {

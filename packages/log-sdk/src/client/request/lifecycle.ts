@@ -15,10 +15,10 @@ export async function withRequestDeadline<T>(
     throw new AbortError("Request aborted", { cause: signal.reason });
 
   const controller = new AbortController();
-  const abort = () => controller.abort(signal?.reason);
-  signal?.addEventListener("abort", abort, { once: true });
+  const handleCallerAbort = (): void => controller.abort(signal?.reason);
+  signal?.addEventListener("abort", handleCallerAbort, { once: true });
   let timedOut = false;
-  const timer = setTimeout(() => {
+  const timer = setTimeout((): void => {
     timedOut = true;
     controller.abort();
   }, timeoutMs);
@@ -33,13 +33,13 @@ export async function withRequestDeadline<T>(
         cause,
       });
 
-    // An injected fetch's operation error cannot redefine this request's dispatch outcome.
-    const isOperationError = cause instanceof OperationError;
-    const isDiagnostic = cause instanceof LogError && !isOperationError;
-    if (isDiagnostic) throw cause;
+    const isInjectedFetchOperationError = cause instanceof OperationError;
+    const isRequestDiagnostic =
+      cause instanceof LogError && !isInjectedFetchOperationError;
+    if (isRequestDiagnostic) throw cause;
     throw new ConnectionError("Failed to complete Log request", { cause });
   } finally {
     clearTimeout(timer);
-    signal?.removeEventListener("abort", abort);
+    signal?.removeEventListener("abort", handleCallerAbort);
   }
 }
