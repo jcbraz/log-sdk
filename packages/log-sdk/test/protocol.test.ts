@@ -10,10 +10,16 @@ import {
   parseJSON,
   sequence,
 } from "../src/protocol.js";
+import type {
+  AppendResponse,
+  CountResponse,
+  ListSegmentsResponse,
+  ScanResponse,
+} from "../src/types/index.js";
 
-test("JSON integer decoding preserves full u64/i64 precision and ignores strings", () => {
+test("JSON integer decoding preserves full u64/i64 precision and ignores strings", (): void => {
   const body = parseJSON(
-    '{"status":"success","startSequence":18446744073709551615,"recordsAppended":1,"unknown":"escaped \\\"sequence\\\":9007199254740993"}',
+    '{"status":"success","startSequence":18446744073709551615,"recordsAppended":1,"unknown":"escaped \\"sequence\\":9007199254740993"}',
   );
   assert.equal(decodeAppend(body).startSequence, 18446744073709551615n);
   assert.equal(
@@ -37,12 +43,21 @@ test("JSON integer decoding preserves full u64/i64 precision and ignores strings
       exponent: "1e2",
     },
   );
-  assert.throws(() => parseJSON('{"count":0000000000000001}'), SyntaxError);
-  assert.throws(() => parseJSON('{"count":1,"extra":01.0}'), SyntaxError);
-  assert.throws(() => parseJSON('{"count":1,"extra":01e2}'), SyntaxError);
+  assert.throws(
+    (): unknown => parseJSON('{"count":0000000000000001}'),
+    SyntaxError,
+  );
+  assert.throws(
+    (): unknown => parseJSON('{"count":1,"extra":01.0}'),
+    SyntaxError,
+  );
+  assert.throws(
+    (): unknown => parseJSON('{"count":1,"extra":01e2}'),
+    SyntaxError,
+  );
 });
 
-test("integer metadata rejects fractional or exponent tokens before they can round", () => {
+test("integer metadata rejects fractional or exponent tokens before they can round", (): void => {
   for (const token of [
     "0.99999999999999999",
     "9007199254740991.49",
@@ -51,11 +66,12 @@ test("integer metadata rejects fractional or exponent tokens before they can rou
     "1e2",
   ]) {
     assert.throws(
-      () => decodeCount(parseJSON(`{"status":"success","count":${token}}`)),
+      (): CountResponse =>
+        decodeCount(parseJSON(`{"status":"success","count":${token}}`)),
       ProtocolError,
     );
     assert.throws(
-      () =>
+      (): ScanResponse<Uint8Array> =>
         decodeScan(
           parseJSON(
             `{"status":"success","key":"","values":[{"sequence":${token},"value":""}]}`,
@@ -66,23 +82,28 @@ test("integer metadata rejects fractional or exponent tokens before they can rou
   }
 });
 
-test("numeric metadata rejects runtimes without original JSON source text", () => {
+test("numeric metadata rejects runtimes without original JSON source text", (): void => {
   const nativeParse = JSON.parse;
-  JSON.parse = (text, reviver) =>
-    nativeParse(text, (key, value) => (reviver ? reviver(key, value) : value));
+  JSON.parse = (text, reviver): unknown =>
+    nativeParse(text, (key, value): unknown =>
+      reviver ? reviver(key, value) : value,
+    );
   try {
     for (const token of ["0", "9007199254740993", "0.99999999999999999"]) {
-      assert.throws(() => parseJSON(`{"status":"success","count":${token}}`), {
-        name: "ProtocolError",
-        message: /JSON number source text/,
-      });
+      assert.throws(
+        (): unknown => parseJSON(`{"status":"success","count":${token}}`),
+        {
+          name: "ProtocolError",
+          message: /JSON number source text/,
+        },
+      );
     }
   } finally {
     JSON.parse = nativeParse;
   }
 });
 
-test("unsigned inputs reject unsafe numbers, fractions and overflow", () => {
+test("unsigned inputs reject unsafe numbers, fractions and overflow", (): void => {
   assert.equal(sequence(42, "cursor"), 42n);
   assert.equal(
     sequence(18446744073709551615n, "cursor"),
@@ -97,11 +118,11 @@ test("unsigned inputs reject unsafe numbers, fractions and overflow", () => {
     -1n,
     18446744073709551616n,
   ]) {
-    assert.throws(() => sequence(value, "cursor"), ValidationError);
+    assert.throws((): bigint => sequence(value, "cursor"), ValidationError);
   }
 });
 
-test("response schemas reject partial, malformed, imprecise and out-of-range data", () => {
+test("response schemas reject partial, malformed, imprecise and out-of-range data", (): void => {
   for (const response of [
     null,
     [],
@@ -119,10 +140,10 @@ test("response schemas reject partial, malformed, imprecise and out-of-range dat
       startSequence: "18446744073709551616",
     },
   ]) {
-    assert.throws(() => decodeAppend(response), ProtocolError);
+    assert.throws((): AppendResponse => decodeAppend(response), ProtocolError);
   }
   assert.throws(
-    () =>
+    (): ScanResponse<Uint8Array> =>
       decodeScan({
         status: "success",
         key: "YQ==",
@@ -131,7 +152,7 @@ test("response schemas reject partial, malformed, imprecise and out-of-range dat
     ProtocolError,
   );
   assert.throws(
-    () =>
+    (): ListSegmentsResponse =>
       decodeSegments({
         status: "success",
         segments: [{ id: 0, startSeq: 0, startTimeMs: "9223372036854775808" }],
@@ -140,7 +161,7 @@ test("response schemas reject partial, malformed, imprecise and out-of-range dat
   );
 });
 
-test("scan supports current and legacy cursors without losing integer precision", () => {
+test("scan supports current and legacy cursors without losing integer precision", (): void => {
   const response = decodeScan(
     parseJSON(
       '{"status":"success","key":"YQ==","values":[{"sequence":9007199254740993,"value":"AAH/"}],"nextSequence":9007199254740994}',
@@ -156,8 +177,8 @@ test("scan supports current and legacy cursors without losing integer precision"
   );
 });
 
-test("byte encoding round-trips UTF-8, arbitrary bytes, slices and large payloads", () => {
-  const bytes = new Uint8Array(50_000).map((_, index) => index % 256);
+test("byte encoding round-trips UTF-8, arbitrary bytes, slices and large payloads", (): void => {
+  const bytes = new Uint8Array(50_000).map((_, index): number => index % 256);
   assert.deepEqual(
     decodeBytes(encodeBytes(bytes.subarray(3, 40000)), "value"),
     bytes.subarray(3, 40000),
@@ -168,12 +189,12 @@ test("byte encoding round-trips UTF-8, arbitrary bytes, slices and large payload
     new TextEncoder().encode(text),
   );
   assert.deepEqual(decodeBytes("", "value"), new Uint8Array());
-  assert.throws(() => decodeBytes("a", "value"), ProtocolError);
-  assert.throws(() => decodeBytes("AA-_", "value"), ProtocolError);
-  assert.throws(() => decodeBytes("AB==", "value"), ProtocolError);
+  assert.throws((): Uint8Array => decodeBytes("a", "value"), ProtocolError);
+  assert.throws((): Uint8Array => decodeBytes("AA-_", "value"), ProtocolError);
+  assert.throws((): Uint8Array => decodeBytes("AB==", "value"), ProtocolError);
 });
 
-test("native and browser encoders agree on Unicode, invalid surrogates and byte slices", () => {
+test("native and browser encoders agree on Unicode, invalid surrogates and byte slices", (): void => {
   const nativeBuffer = globalThis.Buffer;
   const inputs = [
     "",
@@ -182,24 +203,27 @@ test("native and browser encoders agree on Unicode, invalid surrogates and byte 
     "🧪".repeat(10_000),
     new Uint8Array([99, 0, 255, 128, 99]).subarray(1, 4),
   ];
-  const expected = inputs.map((input) => {
-    const bytes =
-      typeof input === "string" ? new TextEncoder().encode(input) : input;
-    return { bytes, base64: nativeBuffer.from(bytes).toString("base64") };
-  });
+  const expected = inputs.map(
+    (input): { bytes: Uint8Array; base64: string } => {
+      const bytes =
+        typeof input === "string" ? new TextEncoder().encode(input) : input;
+      return { bytes, base64: nativeBuffer.from(bytes).toString("base64") };
+    },
+  );
 
   try {
     for (const hasBuffer of [true, false]) {
       globalThis.Buffer = hasBuffer
         ? nativeBuffer
         : (undefined as unknown as typeof Buffer);
-      inputs.forEach((input, index) => {
-        const result = expected[index]!;
+      inputs.forEach((input, index): void => {
+        const result = expected[index];
+        assert.ok(result);
         assert.equal(encodeBytes(input), result.base64);
         assert.deepEqual(decodeBytes(result.base64, "value"), result.bytes);
       });
       assert.throws(
-        () => encodeBytes(null as unknown as Uint8Array),
+        (): string => encodeBytes(null as unknown as Uint8Array),
         ValidationError,
       );
     }
@@ -208,7 +232,7 @@ test("native and browser encoders agree on Unicode, invalid surrogates and byte 
   }
 });
 
-test("large valid scan payloads decode without regexp stack overflow", () => {
+test("large valid scan payloads decode without regexp stack overflow", (): void => {
   const encoded = "A".repeat(16 * 1024 * 1024);
   const response = decodeScan(
     parseJSON(

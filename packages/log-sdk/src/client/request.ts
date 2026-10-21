@@ -27,9 +27,8 @@ export function createRequest(options: ClientOptions): Request {
 
     return withRequestDeadline(
       { timeoutMs, signal: input.options?.signal },
-      async (signal) => {
+      async (signal): Promise<T> => {
         init.signal = signal;
-        // Mark dispatch immediately before fetch: later append failures have unknown outcomes.
         input.onDispatch?.();
         const response = await config.fetch(url, init);
         const body = await readResponse({ response, url, method, expectsText });

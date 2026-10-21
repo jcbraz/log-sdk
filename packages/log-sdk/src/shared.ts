@@ -7,7 +7,7 @@ export async function runAppend<T>(
 ): Promise<T> {
   let requestDispatched = false;
   try {
-    return await append(() => {
+    return await append((): void => {
       requestDispatched = true;
     });
   } catch (cause) {

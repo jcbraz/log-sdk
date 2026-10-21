@@ -1,13 +1,14 @@
 import { decodeBytes } from "./bytes.js";
 import { ProtocolError, ValidationError } from "./errors.js";
+import type { KeyEntry, ListKeysResponse } from "./types/keys.js";
 import type {
   AppendResponse,
   CountResponse,
+  LogEntry,
   ScanResponse,
   SequenceInput,
 } from "./types/records.js";
-import type { ListKeysResponse } from "./types/keys.js";
-import type { ListSegmentsResponse } from "./types/segments.js";
+import type { ListSegmentsResponse, Segment } from "./types/segments.js";
 
 export function decodeAppend(body: unknown): AppendResponse {
   const response = successResponse(body);
@@ -24,7 +25,7 @@ export function decodeAppend(body: unknown): AppendResponse {
 
 export function decodeScan(body: unknown): ScanResponse {
   const response = successResponse(body);
-  const values = responseArray(response, "values").map((value) => {
+  const values = responseArray(response, "values").map((value): LogEntry => {
     const entry = responseObject(value, "values entry");
     return {
       sequence: responseBigInt({ response: entry, field: "sequence" }),
@@ -48,7 +49,7 @@ export function decodeScan(body: unknown): ScanResponse {
 
 export function decodeKeys(body: unknown): ListKeysResponse {
   const response = successResponse(body);
-  const keys = responseArray(response, "keys").map((value) => {
+  const keys = responseArray(response, "keys").map((value): KeyEntry => {
     const entry = responseObject(value, "keys entry");
     return { key: decodeBytes(entry.key, "key") };
   });
@@ -57,7 +58,7 @@ export function decodeKeys(body: unknown): ListKeysResponse {
 
 export function decodeSegments(body: unknown): ListSegmentsResponse {
   const response = successResponse(body);
-  const segments = responseArray(response, "segments").map((value) => {
+  const segments = responseArray(response, "segments").map((value): Segment => {
     const segment = responseObject(value, "segment");
     return {
       id: responseNumber({
@@ -88,7 +89,7 @@ export function decodeCount(body: unknown): CountResponse {
 export function parseJSON(text: string): unknown {
   return JSON.parse(
     text,
-    (_key: string, value: unknown, context?: { source: string }) => {
+    (_key: string, value: unknown, context?: { source: string }): unknown => {
       const isNumber = typeof value === "number";
       if (!isNumber) return value;
 
@@ -97,9 +98,8 @@ export function parseJSON(text: string): unknown {
       if (!hasNumberSource) {
         throw new ProtocolError("Runtime must support JSON number source text");
       }
-      // Fractions can round to integers too; schema checks must see their syntax.
-      const isExactInteger =
-        Number.isSafeInteger(value) && /^-?\d+$/.test(token);
+      const hasIntegerSyntax = /^-?\d+$/.test(token);
+      const isExactInteger = Number.isSafeInteger(value) && hasIntegerSyntax;
       return isExactInteger ? value : token;
     },
   );

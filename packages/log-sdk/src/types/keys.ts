@@ -7,7 +7,11 @@ export interface ListKeysRequest {
   limit?: number;
 }
 
+export interface KeyEntry {
+  key: Uint8Array;
+}
+
 export interface ListKeysResponse {
   status: "success";
-  keys: { key: Uint8Array }[];
+  keys: KeyEntry[];
 }

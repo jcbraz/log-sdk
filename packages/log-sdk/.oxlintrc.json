@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [],
+  "categories": {
+    "correctness": "off"
+  },
+  "jsPlugins": [
+    {
+      "name": "sdk",
+      "specifier": "./scripts/lint/oxlint-plugin.ts"
+    }
+  ],
+  "rules": {
+    "sdk/max-if-conditions": "error",
+    "sdk/max-function-lines": "error",
+    "sdk/no-nested-ternary": "error",
+    "sdk/handler-prefix": "error",
+    "sdk/external-dependency-comments": "error",
+    "sdk/prefer-local-value": "error"
+  },
+  "overrides": [
+    {
+      "files": ["examples/**"],
+      "rules": { "sdk/external-dependency-comments": "off" }
+    }
+  ],
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/*.d.ts"]
+}

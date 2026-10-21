@@ -7,7 +7,13 @@ export interface ListSegmentsRequest {
   endSequence?: SequenceInput;
 }
 
+export interface Segment {
+  id: number;
+  startSeq: bigint;
+  startTimeMs: bigint;
+}
+
 export interface ListSegmentsResponse {
   status: "success";
-  segments: { id: number; startSeq: bigint; startTimeMs: bigint }[];
+  segments: Segment[];
 }

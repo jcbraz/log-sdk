@@ -34,7 +34,7 @@ function parseHttpError({
   url: URL;
   method: string;
 }): HttpError {
-  const body = parseErrorBody(text);
+  const body = parseJSONOrPlainText(text);
   const hasMessageField =
     body !== null && typeof body === "object" && "message" in body;
   const bodyMessage = hasMessageField ? body.message : undefined;
@@ -52,11 +52,10 @@ function parseHttpError({
   });
 }
 
-function parseErrorBody(text: string): unknown {
+function parseJSONOrPlainText(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
-    // Framework and proxy failures can be plain text.
     return text;
   }
 }
