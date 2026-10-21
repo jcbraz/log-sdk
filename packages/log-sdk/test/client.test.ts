@@ -306,6 +306,51 @@ test("validation catches invalid configuration and unsafe numeric inputs before 
   );
 });
 
+test("endSequence reads the whole log's end from an unwritten probe key", async () => {
+  const urls: URL[] = [];
+  const client = new Log({
+    baseURL,
+    fetch: async (input) => {
+      urls.push(new URL(input.toString()));
+      return new Response(
+        '{"status":"success","key":"","values":[],"nextSequence":9007199254740993}',
+        { headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+  assert.equal(await client.endSequence(), 9007199254740993n);
+  assert.equal(urls[0]!.pathname, "/proxy/api/v1/log/scan");
+  const { key, ...query } = Object.fromEntries(urls[0]!.searchParams);
+  assert.deepEqual(query, { start_seq: "0", limit: "1" });
+  assert.ok(key!.startsWith("\u0000"));
+});
+
+test("endSequence rejects servers without nextSequence and a written probe key", async () => {
+  const rejects = (page: object, message: RegExp) =>
+    assert.rejects(
+      new Log({
+        baseURL,
+        fetch: async () => Response.json(page),
+      }).endSequence(),
+      readFailure("endSequence", ProtocolError, (cause) =>
+        assert.match(cause.message, message),
+      ),
+    );
+  await rejects(
+    { status: "success", key: "", values: [] },
+    /requires OpenData Log 1\.0\.0 or later/,
+  );
+  await rejects(
+    {
+      status: "success",
+      key: "",
+      values: [{ sequence: 4, value: "" }],
+      nextSequence: 5,
+    },
+    /probe key has records/,
+  );
+});
+
 test("operational endpoint results remain text", async () => {
   const client = new Log({
     baseURL,
@@ -323,6 +368,7 @@ test("every read endpoint identifies its operation and preserves the HTTP diagno
   });
   const reads: [ReadOperation, () => Promise<unknown>][] = [
     ["scan", () => client.scan({ key: "orders" })],
+    ["endSequence", () => client.endSequence()],
     ["count", () => client.count({ key: "orders" })],
     ["listKeys", () => client.listKeys()],
     ["listSegments", () => client.listSegments()],

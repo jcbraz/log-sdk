@@ -79,6 +79,7 @@ type ReadOperations = Assert<
   Equal<
     ReadOperation,
     | "scan"
+    | "endSequence"
     | "follow"
     | "count"
     | "listKeys"

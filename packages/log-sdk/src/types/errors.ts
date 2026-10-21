@@ -1,5 +1,6 @@
 export type ReadOperation =
   | "scan"
+  | "endSequence"
   | "follow"
   | "count"
   | "listKeys"

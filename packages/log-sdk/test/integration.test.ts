@@ -487,6 +487,37 @@ test("operational endpoints return text and preserve HTTP failures", async () =>
   }
 });
 
+test("endSequence is the whole log's end and a valid start for any key", async () => {
+  const client = new Log({ baseURL });
+  const writtenKey = uniqueKey("end-written");
+  const laterKey = uniqueKey("end-later");
+  const appended = await client.append({
+    records: [
+      { key: writtenKey, value: "before" },
+      { key: uniqueKey("end-other"), value: "before" },
+    ],
+    awaitDurable: true,
+  });
+
+  const end = await client.endSequence();
+  assert.ok(end >= appended.startSequence + 2n);
+
+  const later = await client.append({
+    records: [{ key: laterKey, value: "after" }],
+    awaitDurable: true,
+  });
+  assert.ok(later.startSequence >= end);
+  assert.ok((await client.endSequence()) > later.startSequence);
+
+  const skipped = await client.scan({ key: writtenKey, startSequence: end });
+  assert.deepEqual(skipped.values, []);
+  const received = await client.scan({ key: laterKey, startSequence: end });
+  assert.deepEqual(
+    received.values.map((entry) => entry.sequence),
+    [later.startSequence],
+  );
+});
+
 test("typed consumers resume from a persisted checkpoint across global sequence gaps", async () => {
   type OrderCreated = { type: "order.created"; orderId: string };
   const client = new Log({ baseURL });

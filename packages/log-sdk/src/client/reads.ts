@@ -1,4 +1,4 @@
-import { ValidationError } from "../errors.js";
+import { ProtocolError, ValidationError } from "../errors.js";
 import {
   decodeCount,
   decodeKeys,
@@ -21,27 +21,57 @@ import type { RequestOptions } from "../types/client.js";
 import type { Request } from "./request.js";
 import { queryInteger, querySequence } from "./utils.js";
 
+/** Never appended by the SDK; a scan of it reports only the log's observed end. */
+const END_SEQUENCE_PROBE_KEY = "\u0000opendata-log-sdk/end-sequence-probe";
+
 export function createReads(request: Request) {
+  function requestScan(
+    input: ScanRequest,
+    options: RequestOptions | undefined,
+  ): Promise<ScanResponse> {
+    const isValidIncomingTextKey = typeof input.key === "string";
+    if (!isValidIncomingTextKey)
+      throw new ValidationError("Key must be a UTF-8 string.");
+
+    return request({
+      path: "api/v1/log/scan",
+      query: {
+        key: input.key,
+        start_seq: querySequence(input.startSequence, "startSequence"),
+        end_seq: querySequence(input.endSequence, "endSequence"),
+        limit: queryInteger({ value: input.limit, field: "limit" }),
+        follow: input.follow,
+        timeout_ms: querySequence(input.timeoutMs, "timeoutMs"),
+      },
+      options,
+      decode: decodeScan,
+    });
+  }
+
   return {
     scan(input: ScanRequest, options?: RequestOptions): Promise<ScanResponse> {
-      return runRead("scan", () => {
-        const isValidIncomingTextKey = typeof input.key === "string";
-        if (!isValidIncomingTextKey)
-          throw new ValidationError("Key must be a UTF-8 string.");
+      return runRead("scan", () => requestScan(input, options));
+    },
 
-        return request({
-          path: "api/v1/log/scan",
-          query: {
-            key: input.key,
-            start_seq: querySequence(input.startSequence, "startSequence"),
-            end_seq: querySequence(input.endSequence, "endSequence"),
-            limit: queryInteger({ value: input.limit, field: "limit" }),
-            follow: input.follow,
-            timeout_ms: querySequence(input.timeoutMs, "timeoutMs"),
-          },
+    endSequence(options?: RequestOptions): Promise<bigint> {
+      return runRead("endSequence", async () => {
+        // A drained scan lifts nextSequence to the log's frontier, even for a key with no records.
+        const page = await requestScan(
+          { key: END_SEQUENCE_PROBE_KEY, startSequence: 0n, limit: 1 },
           options,
-          decode: decodeScan,
-        });
+        );
+        const hasProbeRecords = page.values.length > 0;
+        if (hasProbeRecords)
+          throw new ProtocolError(
+            "The end-sequence probe key has records; its scan cannot report the log's end",
+          );
+        const { nextSequence } = page;
+        const hasFrontier = nextSequence !== undefined;
+        if (!hasFrontier)
+          throw new ProtocolError(
+            "Scan response omitted nextSequence; endSequence requires OpenData Log 1.0.0 or later",
+          );
+        return nextSequence;
       });
     },
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `log.endSequence()` returns where the whole log ends: the sequence the next append to any key receives, valid as a `startSequence` for every key. Requires OpenData Log 1.0.0 or later.
+
 ## 0.1.0
 
 - Typed HTTP client for all five data endpoints and health, readiness and metrics.
