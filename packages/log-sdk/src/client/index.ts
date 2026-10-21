@@ -26,6 +26,16 @@ export class Log {
    */
   scan;
   /**
+   * Find where the whole log currently ends: the sequence the next append to any key receives.
+   * Keys share one global counter, so the result is a valid `startSequence` for every key.
+   * It can trail the true end by writes the server has not yet observed, such as non-durable appends;
+   * reading from it may include those records but never skips one.
+   * @param options - Caller abort signal and HTTP timeout override.
+   * @returns The log's exclusive end sequence as a bigint.
+   * @throws {ReadError} Identifies the endSequence operation and its cause, including a server older than 1.0.0.
+   */
+  endSequence;
+  /**
    * List distinct keys in a segment range. The API provides no continuation cursor.
    * @param input - Inclusive start segment, exclusive end segment and result limit.
    * @param options - Caller abort signal and HTTP timeout override.
@@ -83,6 +93,7 @@ export class Log {
 
     this.append = createAppend(request);
     this.scan = reads.scan;
+    this.endSequence = reads.endSequence;
     this.listKeys = reads.listKeys;
     this.listSegments = reads.listSegments;
     this.count = reads.count;

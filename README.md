@@ -26,6 +26,7 @@ await log.append({
 });
 
 await log.scan({ key: "messages", startSequence: 0n, limit: 100 });
+await log.endSequence(); // bigint: where the whole log ends now
 await log.count({ key: "messages" });
 await log.listKeys({ limit: 100 });
 await log.listSegments({ startSequence: 0n });
@@ -49,6 +50,7 @@ Runnable examples are in [`packages/log-sdk/examples`](https://github.com/jcbraz
 bun run build
 LOG_URL=http://localhost:8081 bun packages/log-sdk/examples/orders.ts
 LOG_URL=http://localhost:8081 bun packages/log-sdk/examples/agent-stream.ts
+LOG_URL=http://localhost:8081 bun packages/log-sdk/examples/start-now.ts
 ```
 
 ### Orders
@@ -89,6 +91,23 @@ for await (const entry of orders.follow({ startSequence: checkpoint })) {
 Checkpoint storage and event handling are application functions. Save after processing and make handlers safe to replay. Store bigint checkpoints as decimal strings when using JSON. Pass an `AbortSignal` to `follow` to cancel it.
 
 Type parameters describe the expected event shape. For runtime validation, pass `jsonCodec(validate)` to `log.stream`, or supply a custom `Codec<T>`.
+
+### Start reading now
+
+A Log has one sequence counter for all records. Each append takes the next numbers, whatever its key, so a key is an index over that one counter: its sequences increase but skip the numbers other keys used.
+
+`log.endSequence()` returns where the whole log currently ends: the sequence the next append to any key receives. It is not per key. Because every key shares the counter, that number is a valid `startSequence` for any key and means "start reading now". A new handler with no checkpoint can skip history this way:
+
+```ts
+const checkpoint = (await loadCheckpoint()) ?? (await log.endSequence());
+
+for await (const entry of orders.follow({ startSequence: checkpoint })) {
+  await handleOrder(entry.value);
+  await saveCheckpoint(entry.sequence + 1n);
+}
+```
+
+The result can trail the true end by writes the server has not observed yet, such as non-durable appends. Reading from it may include those records but never skips one. OpenData Log has no endpoint for this yet: the SDK scans an internal key that is never written, and a drained scan reports the log's frontier as `nextSequence` ([RFC 0007](https://github.com/opendata-oss/opendata/blob/main/log/rfcs/0007-efficient-tail-scans.md)). Servers older than 1.0.0 omit that field, and `endSequence` throws a `ReadError` instead of guessing.
 
 ### Agent
 

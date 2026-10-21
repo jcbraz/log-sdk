@@ -306,6 +306,71 @@ test("validation catches invalid configuration and unsafe numeric inputs before 
   );
 });
 
+test("endSequence reads the whole log's end from an unwritten probe key", async () => {
+  const urls: URL[] = [];
+  const client = new Log({
+    baseURL,
+    fetch: async (input) => {
+      urls.push(new URL(input.toString()));
+      return new Response(
+        '{"status":"success","key":"","values":[],"nextSequence":9007199254740993}',
+        { headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+  assert.equal(await client.endSequence(), 9007199254740993n);
+  assert.equal(urls[0]!.pathname, "/proxy/api/v1/log/scan");
+  const { key, ...query } = Object.fromEntries(urls[0]!.searchParams);
+  assert.deepEqual(query, { start_seq: "0", limit: "1" });
+  assert.ok(key!.startsWith("\u0000"));
+
+  await client.endSequence();
+  assert.equal(urls[1]!.searchParams.get("key"), key);
+});
+
+test("endSequence rejects servers without nextSequence and a written probe key", async () => {
+  const pages = [
+    { status: "success", key: "", values: [] },
+    {
+      status: "success",
+      key: "",
+      values: [{ sequence: 4, value: "" }],
+      nextSequence: 5,
+    },
+  ];
+  for (const page of pages) {
+    const client = new Log({ baseURL, fetch: async () => Response.json(page) });
+    await assert.rejects(
+      client.endSequence(),
+      readFailure("endSequence", ProtocolError),
+    );
+  }
+  await assert.rejects(
+    new Log({
+      baseURL,
+      fetch: async () => Response.json(pages[0]),
+    }).endSequence(),
+    /requires OpenData Log 1\.0\.0 or later/,
+  );
+});
+
+test("endSequence applies request options before dispatch", async () => {
+  const client = new Log({
+    baseURL,
+    fetch: async () => {
+      assert.fail("must not fetch");
+    },
+  });
+  await assert.rejects(
+    client.endSequence({ timeoutMs: 0 }),
+    readFailure("endSequence", ValidationError),
+  );
+  await assert.rejects(
+    client.endSequence({ signal: AbortSignal.abort() }),
+    readFailure("endSequence", AbortError),
+  );
+});
+
 test("operational endpoint results remain text", async () => {
   const client = new Log({
     baseURL,
@@ -323,6 +388,7 @@ test("every read endpoint identifies its operation and preserves the HTTP diagno
   });
   const reads: [ReadOperation, () => Promise<unknown>][] = [
     ["scan", () => client.scan({ key: "orders" })],
+    ["endSequence", () => client.endSequence()],
     ["count", () => client.count({ key: "orders" })],
     ["listKeys", () => client.listKeys()],
     ["listSegments", () => client.listSegments()],

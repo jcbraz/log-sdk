@@ -1,4 +1,5 @@
-import { ValidationError } from "../errors.js";
+import { END_SEQUENCE_PROBE_KEY } from "../constants.js";
+import { ProtocolError, ValidationError } from "../errors.js";
 import {
   decodeCount,
   decodeKeys,
@@ -42,6 +43,30 @@ export function createReads(request: Request) {
           options,
           decode: decodeScan,
         });
+      });
+    },
+
+    endSequence(options?: RequestOptions): Promise<bigint> {
+      return runRead("endSequence", async () => {
+        // A drained scan lifts nextSequence to the log's frontier, even for a key with no records.
+        const page = await request({
+          path: "api/v1/log/scan",
+          query: { key: END_SEQUENCE_PROBE_KEY, start_seq: 0n, limit: 1 },
+          options,
+          decode: decodeScan,
+        });
+        const hasProbeRecords = page.values.length > 0;
+        if (hasProbeRecords)
+          throw new ProtocolError(
+            "The end-sequence probe key has records; its scan cannot report the log's end",
+          );
+        const { nextSequence } = page;
+        const hasFrontier = nextSequence !== undefined;
+        if (!hasFrontier)
+          throw new ProtocolError(
+            "Scan response omitted nextSequence; endSequence requires OpenData Log 1.0.0 or later",
+          );
+        return nextSequence;
       });
     },
 
